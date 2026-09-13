@@ -235,9 +235,18 @@ If you implement it:
 
 - Return `null` when there is no fresh detection. The localizer skips the update;
   it never blocks.
-- Report poses in **field coordinates**. This is the easy direction now: a tag's
-  field position is fixed and published, so a detection converts straight into an
-  absolute pose with no knowledge of where the robot started.
+- Report poses in **field coordinates**. In a season with wall-mounted tags this
+  is the easy direction: a tag's field position is fixed and published, so a
+  detection converts straight into an absolute pose with no knowledge of where
+  the robot started.
+
+  **BIOBUZZ (2026–27) is not such a season.** Its AprilTag clusters are on the
+  underside of the HIVE CELLS, which pivot (Competition Manual §9.6, §9.9), and
+  the FTC SDK 12.0 release notes say outright: "since BIOBUZZ AprilTags move,
+  they are not suitable for absolute Field Localization." `FusedLocalizer.correctPose()` assumes an observation is a
+  fixed, known field pose; a moving tag needs the tag's own current pose
+  tracked before a detection can become one. Nothing here is built against it
+  yet — this is a caution for whoever starts, not a defect.
 - Scale variances with observed range and viewing angle. Constant variances
   defeat the purpose of fusing.
 

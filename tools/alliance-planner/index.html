@@ -538,6 +538,7 @@
     <div class="card">
       <h2>Field</h2>
       <div class="btn-row">
+        <button class="btn" id="builtinFieldBtn">BIOBUZZ field</button>
         <button class="btn" id="loadImageBtn">Load field image&hellip;</button>
         <button class="btn danger" id="clearImageBtn">Clear</button>
       </div>
@@ -549,8 +550,11 @@
         <input type="range" id="imgOpacity" min="0" max="100" value="70">
       </div>
       <div class="hint">
-        Drop an official field image on the canvas and it is stretched over the
-        144&Prime; square. No game field is drawn from memory &mdash; a field that is
+        The built-in field is the 2026&ndash;27 BIOBUZZ layout, cropped from
+        Figure 6-1 of the official Event Field Setup Guide. Audience side is
+        &minus;Y, red alliance is &minus;X, blue is +X. Drop another official
+        image on the canvas and it is stretched over the 144&Prime; square
+        instead. No game field is drawn from memory &mdash; a field that is
         subtly wrong is worse than no field at all.
       </div>
     </div>
@@ -921,6 +925,23 @@ let fieldImage = null;
 let fieldImageBlob = null;
 let fieldImageUrl = null;
 let fieldImageName = null;
+/* Which bundled field is showing, or null when the backdrop is a user upload
+   (or nothing). A bundled field is saved by id, not inlined, so a plan file
+   does not carry a copy of a picture the planner already ships. */
+let fieldImageBuiltin = null;
+
+/* Bundled field graphics. Each is a top-down crop of an official FIRST figure
+   -- never a redraw -- scaled so that the image edges are the inside of the
+   FIELD perimeter. Audience side at the bottom of the picture (-Y), red
+   alliance on the left (-X), per Competition Manual 9.5. */
+const BUILTIN_FIELDS = {
+  biobuzz: {
+    file: "assets/field-biobuzz.png",
+    label: "BIOBUZZ 2026–27 (built-in)",
+    source: "Event Field Setup Guide V1.0, Figure 6-1"
+  }
+};
+const DEFAULT_FIELD = "biobuzz";
 
 /* Optional per-robot marker pictures, indexed to match S.robots. Held as Blobs
    for the same reason the field backdrop is: base64 in tracked state would
@@ -2608,8 +2629,43 @@ function clearFieldImage() {
   fieldImageBlob = null;
   fieldImageUrl = null;
   fieldImageName = null;
+  fieldImageBuiltin = null;
   updateFieldImageLabel();
   render();
+}
+
+/**
+ * Shows one of the bundled fields. Loaded straight from the asset path rather
+ * than fetched, so it still works when the planner is opened as a local file,
+ * where fetch() is refused.
+ */
+function useBuiltinField(id) {
+  const spec = BUILTIN_FIELDS[id];
+  if (!spec) { clearFieldImage(); return; }
+
+  const img = new Image();
+  img.onload = () => {
+    if (fieldImageUrl) URL.revokeObjectURL(fieldImageUrl);
+    fieldImage = img;
+    fieldImageBlob = null;
+    fieldImageUrl = null;
+    fieldImageName = spec.label;
+    fieldImageBuiltin = id;
+    updateFieldImageLabel();
+    render();
+  };
+  img.onerror = () => {
+    // The asset is missing (an index.html copied out on its own, say). Say
+    // so rather than leave a blank field looking like a choice.
+    clearFieldImage();
+    const el = document.getElementById("fieldImageLabel");
+    if (el) {
+      el.textContent = `${spec.label} not found — expected ${spec.file} `
+        + "next to index.html.";
+      el.style.color = "var(--warn)";
+    }
+  };
+  img.src = spec.file;
 }
 
 /** Loads a field backdrop from a Blob or File. */
@@ -2624,6 +2680,7 @@ function setFieldImageBlob(blob, name) {
     fieldImageBlob = blob;
     fieldImageUrl = url;
     fieldImageName = name || "field image";
+    fieldImageBuiltin = null;
     updateFieldImageLabel();
     render();
   };
@@ -2641,6 +2698,23 @@ function setFieldImageFromDataUrl(dataUrl, name) {
     .then(r => r.blob())
     .then(b => setFieldImageBlob(b, name || "from plan"))
     .catch(() => alert("The field image stored in that plan could not be read."));
+}
+
+/**
+ * Restores the backdrop a plan was saved with. Plans from before the bundled
+ * field say nothing at all when they had no picture -- back then blank was
+ * the only default -- so those get the current default rather than nothing.
+ */
+function applySavedField(field) {
+  if (field.imageDataUrl) {
+    setFieldImageFromDataUrl(field.imageDataUrl, "from plan");
+  } else if (field.builtin) {
+    useBuiltinField(BUILTIN_FIELDS[field.builtin] ? field.builtin : DEFAULT_FIELD);
+  } else if (field.image === "none" || field.image === "oversized") {
+    clearFieldImage();
+  } else {
+    useBuiltinField(DEFAULT_FIELD);
+  }
 }
 
 /** Base64 for saving. Resolves to null when there is no image. */
@@ -2717,13 +2791,20 @@ function updateFieldImageLabel() {
     el.style.color = "";
     return;
   }
-  const kb = fieldImageBlob ? Math.round(fieldImageBlob.size / 1024) : 0;
   const hidden = S.field.opacity <= 0.01;
-  el.textContent = `${fieldImageName} — ${fieldImage.naturalWidth}×`
-    + `${fieldImage.naturalHeight}, ${kb} KB`
+  const size = fieldImageBlob
+    ? `${fieldImage.naturalWidth}×${fieldImage.naturalHeight}, `
+      + `${Math.round(fieldImageBlob.size / 1024)} KB`
+    : `${fieldImage.naturalWidth}×${fieldImage.naturalHeight}`;
+  const source = fieldImageBuiltin
+    ? ` — ${BUILTIN_FIELDS[fieldImageBuiltin].source}` : "";
+  el.textContent = `${fieldImageName} — ${size}${source}`
     + (hidden ? " — hidden, opacity is 0" : "");
   el.style.color = hidden ? "var(--warn)" : "var(--ok)";
 }
+
+document.getElementById("builtinFieldBtn").addEventListener("click", () =>
+  useBuiltinField(DEFAULT_FIELD));
 
 document.getElementById("loadImageBtn").addEventListener("click", () =>
   document.getElementById("imageInput").click());
@@ -2938,9 +3019,13 @@ function toJson(embeddedImage, embeddedMarkers) {
     version: 4,
     units: "inches",
     frame: "everything is field coordinates: origin at field centre, heading CCW from +X",
+    // A bundled field is referenced by id; an upload is inlined; a cleared
+    // field says so, so it is not mistaken for a pre-bundle plan on reload.
     field: embeddedImage
       ? { opacity: S.field.opacity, imageDataUrl: embeddedImage }
-      : { opacity: S.field.opacity },
+      : fieldImageBuiltin
+        ? { opacity: S.field.opacity, builtin: fieldImageBuiltin }
+        : { opacity: S.field.opacity, image: fieldImageBlob ? "oversized" : "none" },
     activePlan: S.activePlan,
     markers: (embeddedMarkers || [null, null]).map(m => m || null),
     plans: S.plans.map(p => ({ name: p.name, ...p.data })),
@@ -3095,7 +3180,9 @@ function applyPlanFile(data) {
   if (data.field) {
     S.field.opacity = data.field.opacity != null ? data.field.opacity : 0.7;
     document.getElementById("imgOpacity").value = fmtNum(Math.round(S.field.opacity * 100));
-    setFieldImageFromDataUrl(data.field.imageDataUrl || null, "from plan");
+    applySavedField(data.field);
+  } else {
+    useBuiltinField(DEFAULT_FIELD);
   }
 
   const markers = Array.isArray(data.markers) ? data.markers : [];
@@ -3260,7 +3347,7 @@ window.addEventListener("keydown", e => {
 /* ---------- boot ---------- */
 
 window.addEventListener("resize", render);
-updateFieldImageLabel();
+useBuiltinField(DEFAULT_FIELD);
 applyRobotCount();
 invalidate();
 selectRobot(0);

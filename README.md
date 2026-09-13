@@ -534,9 +534,13 @@ competition.
 - **Heading arrow** per robot, toggleable — the fastest way to see whether a
   robot is facing where it is going or holding a fixed heading while it
   translates.
-- **Field backdrop** — drop in an official field image and it stretches over the
-  144" square. No game field is drawn from memory: one that is subtly wrong is
-  worse than none, because you would plan against fiction.
+- **Field backdrop** — the 2026–27 BIOBUZZ field is built in and shows on a
+  fresh load (`tools/alliance-planner/assets/field-biobuzz.png`, cropped from
+  Figure 6-1 of FIRST's Event Field Setup Guide; audience side −Y, red alliance
+  −X, blue +X, per Competition Manual §9.5). Drop in another official image and
+  it stretches over the 144" square instead. No game field is drawn from
+  memory: one that is subtly wrong is worse than none, because you would plan
+  against fiction.
 - **Exports** — Java code, plan JSON, a sampled points array, or the field as a
   PNG. The code view is full-height and says which robots it covers.
 - **Save / open** — plans are real `.json` files you can commit next to your
