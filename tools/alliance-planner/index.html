@@ -550,9 +550,9 @@
         <input type="range" id="imgOpacity" min="0" max="100" value="70">
       </div>
       <div class="hint">
-        The built-in field is the 2026&ndash;27 BIOBUZZ layout, cropped from
-        Figure 6-1 of the official Event Field Setup Guide. Audience side is
-        &minus;Y, red alliance is &minus;X, blue is +X. Drop another official
+        The built-in field is the 2026&ndash;27 BIOBUZZ layout, a top-down
+        render of the official field. Red alliance is &minus;Y (bottom), blue is
+        +Y (top), audience side is +X (right). Drop another official
         image on the canvas and it is stretched over the 144&Prime; square
         instead. No game field is drawn from memory &mdash; a field that is
         subtly wrong is worse than no field at all.
@@ -930,15 +930,16 @@ let fieldImageName = null;
    does not carry a copy of a picture the planner already ships. */
 let fieldImageBuiltin = null;
 
-/* Bundled field graphics. Each is a top-down crop of an official FIRST figure
-   -- never a redraw -- scaled so that the image edges are the inside of the
-   FIELD perimeter. Audience side at the bottom of the picture (-Y), red
-   alliance on the left (-X), per Competition Manual 9.5. */
+/* Bundled field graphics: top-down renders of the official field, with the
+   image edges on the inside of the FIELD perimeter. The BIOBUZZ picture has
+   the red alliance along the bottom (-Y) and blue along the top (+Y), which
+   puts the audience on the right (+X) -- Competition Manual 9.5 has red on
+   the audience's left. */
 const BUILTIN_FIELDS = {
   biobuzz: {
     file: "assets/field-biobuzz.png",
     label: "BIOBUZZ 2026–27 (built-in)",
-    source: "Event Field Setup Guide V1.0, Figure 6-1"
+    source: "red −Y, blue +Y, audience +X"
   }
 };
 const DEFAULT_FIELD = "biobuzz";
