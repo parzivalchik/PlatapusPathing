@@ -3346,37 +3346,42 @@ window.addEventListener("keydown", e => {
   }
 });
 
-/* ---------- a small door, unmarked ---------- */
+/* ---------- small doors, unmarked ---------- */
 
-/* Park a robot at exactly (0.8, 1.2), facing 36 degrees, and you are there.
-   Move or turn it and you are not. Nothing in the plan changes; only what the
-   land is called. */
+/* Park a robot at exactly one of these poses and you are there. Move or turn
+   it and you are not. Nothing in the plan changes; only what the land is
+   called. */
 var korlan = (() => {   // var: render() may run before this line, and typeof must not throw
-  const DOOR = { x: 0.8, y: 1.2, headingDeg: 36 };
+  const DOORS = [
+    { x: 0.8, y: 1.2, headingDeg: 36, name: "KorlanLand" },
+    { x: 0.6, y: 0.6, headingDeg: 6,  name: "korlan <3" }
+  ];
   const EPS = 1e-6;
-  let inside = false;
+  let current = null;
   const h1 = document.querySelector("#toolbar .brand h1");
   const plain = h1 ? h1.textContent : "";
 
-  const atDoor = r => {
+  const doorFor = r => {
     const p = startPositionOf(r);
-    // Heading is stored in radians; compare in degrees so 36 typed into the
-    // panel matches after the round trip.
+    // Heading is stored in radians; compare in degrees so what was typed into
+    // the panel matches after the round trip.
     const headingDeg = normalizeAngle(r.start.heading) * 180 / Math.PI;
-    return Math.abs(p.x - DOOR.x) < EPS && Math.abs(p.y - DOOR.y) < EPS
-      && Math.abs(headingDeg - DOOR.headingDeg) < EPS;
+    return DOORS.find(d =>
+      Math.abs(p.x - d.x) < EPS && Math.abs(p.y - d.y) < EPS
+      && Math.abs(headingDeg - d.headingDeg) < EPS) || null;
   };
 
   return {
     check() {
-      const now = activeRobots().some(atDoor);
-      if (now === inside) return;
-      inside = now;
-      if (h1) h1.textContent = inside ? "KorlanLand" : plain;
-      document.title = inside ? "KorlanLand" : "PlatapusPathing Planner";
-      console.log(inside
-        ? "Welcome to KorlanLand. The tiles are the same; the name is not."
-        : "You have left KorlanLand.");
+      let door = null;
+      for (const r of activeRobots()) { door = doorFor(r); if (door) break; }
+      if (door === current) return;
+      current = door;
+      if (h1) h1.textContent = door ? door.name : plain;
+      document.title = door ? door.name : "PlatapusPathing Planner";
+      console.log(door
+        ? `Welcome to ${door.name}. The tiles are the same; the name is not.`
+        : "You have left.");
     }
   };
 })();
