@@ -3348,10 +3348,10 @@ window.addEventListener("keydown", e => {
 
 /* ---------- a small door, unmarked ---------- */
 
-/* Park a robot at exactly (-0.2, 1.7) and you are there. Move it and you are
+/* Park a robot at exactly (0.8, 1.2) and you are there. Move it and you are
    not. Nothing in the plan changes; only what the land is called. */
 var korlan = (() => {   // var: render() may run before this line, and typeof must not throw
-  const DOOR = { x: -0.2, y: 1.7 };
+  const DOOR = { x: 0.8, y: 1.2 };
   const EPS = 1e-6;
   let inside = false;
   const h1 = document.querySelector("#toolbar .brand h1");
