@@ -13,9 +13,9 @@
 package org.firstinspires.ftc.teamcode;
 
 import com.qualcomm.robotcore.hardware.HardwareMap;
-import com.verniteyaku.pathing.geometry.ChassisSpeeds;
-import com.verniteyaku.pathing.geometry.Pose2d;
-import com.verniteyaku.pathing.localization.OdometryComputer;
+import com.platapus.pathing.geometry.ChassisSpeeds;
+import com.platapus.pathing.geometry.Pose2d;
+import com.platapus.pathing.localization.OdometryComputer;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;

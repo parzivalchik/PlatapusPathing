@@ -231,7 +231,7 @@ arbitrary moment and the resulting miss impossible to reproduce.
 Proposals are screened: implausible fits are refused, and a fit within 2% of what
 is already active is not worth the churn.
 
-`FtcTuningStore` writes to `/sdcard/FIRST/verniteyaku/feedforward.properties` —
+`FtcTuningStore` writes to `/sdcard/FIRST/platapuspathing/feedforward.properties` —
 three readable lines, survives an app update, deletable over ADB. A corrupt or
 implausible file is refused rather than loaded, because driving on a `kV` of NaN
 is not recoverable.

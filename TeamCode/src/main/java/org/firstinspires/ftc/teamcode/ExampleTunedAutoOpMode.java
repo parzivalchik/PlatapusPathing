@@ -2,29 +2,29 @@ package org.firstinspires.ftc.teamcode;
 
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
-import com.verniteyaku.pathing.command.CommandRunner;
-import com.verniteyaku.pathing.command.Commands;
-import com.verniteyaku.pathing.command.FollowPathCommand;
-import com.verniteyaku.pathing.control.Clock;
-import com.verniteyaku.pathing.control.FollowerConstants;
-import com.verniteyaku.pathing.follower.PathFollower;
-import com.verniteyaku.pathing.geometry.Pose2d;
-import com.verniteyaku.pathing.ftc.FtcTuningStore;
-import com.verniteyaku.pathing.ftc.HubVoltageSource;
-import com.verniteyaku.pathing.ftc.MecanumDrivetrain;
-import com.verniteyaku.pathing.localization.OdometryComputer;
-import com.verniteyaku.pathing.localization.OdometryComputerLocalizer;
-import com.verniteyaku.pathing.paths.BezierCurve;
-import com.verniteyaku.pathing.paths.BezierLine;
-import com.verniteyaku.pathing.paths.PathBuilder;
-import com.verniteyaku.pathing.paths.PathChain;
-import com.verniteyaku.pathing.paths.Point;
-import com.verniteyaku.pathing.tuning.FeedforwardGains;
-import com.verniteyaku.pathing.tuning.StallEvent;
-import com.verniteyaku.pathing.tuning.TunableFeedforward;
-import com.verniteyaku.pathing.tuning.StallDetector;
-import com.verniteyaku.pathing.tuning.TuningSession;
-import com.verniteyaku.pathing.units.DistanceUnit;
+import com.platapus.pathing.command.CommandRunner;
+import com.platapus.pathing.command.Commands;
+import com.platapus.pathing.command.FollowPathCommand;
+import com.platapus.pathing.control.Clock;
+import com.platapus.pathing.control.FollowerConstants;
+import com.platapus.pathing.follower.PathFollower;
+import com.platapus.pathing.geometry.Pose2d;
+import com.platapus.pathing.ftc.FtcTuningStore;
+import com.platapus.pathing.ftc.HubVoltageSource;
+import com.platapus.pathing.ftc.MecanumDrivetrain;
+import com.platapus.pathing.localization.OdometryComputer;
+import com.platapus.pathing.localization.OdometryComputerLocalizer;
+import com.platapus.pathing.paths.BezierCurve;
+import com.platapus.pathing.paths.BezierLine;
+import com.platapus.pathing.paths.PathBuilder;
+import com.platapus.pathing.paths.PathChain;
+import com.platapus.pathing.paths.Point;
+import com.platapus.pathing.tuning.FeedforwardGains;
+import com.platapus.pathing.tuning.StallEvent;
+import com.platapus.pathing.tuning.TunableFeedforward;
+import com.platapus.pathing.tuning.StallDetector;
+import com.platapus.pathing.tuning.TuningSession;
+import com.platapus.pathing.units.DistanceUnit;
 
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -35,7 +35,7 @@ import java.util.concurrent.atomic.AtomicReference;
  *
  * <p>{@link ExampleAutoOpMode} is the simpler starting point -- read that first.
  */
-@Autonomous(name = "VerniteYaku Tuned Auto", group = "VerniteYaku")
+@Autonomous(name = "PlatapusPathing Tuned Auto", group = "PlatapusPathing")
 public class ExampleTunedAutoOpMode extends LinearOpMode {
 
     @Override
@@ -107,7 +107,7 @@ public class ExampleTunedAutoOpMode extends LinearOpMode {
         // The library reports; you decide what it means. Aborting the path,
         // backing off and retrying, or simply logging it are all reasonable and
         // all game-specific, so none of them are built in.
-        stallDetector.addListener(new com.verniteyaku.pathing.tuning.StallListener() {
+        stallDetector.addListener(new com.platapus.pathing.tuning.StallListener() {
             @Override
             public void onStallDetected(StallEvent event) {
                 lastStall.set(String.format("motor %d @ %.1fs (%.1fA vs %.1fA)",

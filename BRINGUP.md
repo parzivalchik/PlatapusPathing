@@ -1,4 +1,4 @@
-# Bring-up: getting VerniteYaku onto a real robot
+# Bring-up: getting PlatapusPathing onto a real robot
 
 **None of this library has run on hardware.** 274 tests pass, but they are
 headless and the simulation is kinematic — no motor dynamics, no battery sag, no

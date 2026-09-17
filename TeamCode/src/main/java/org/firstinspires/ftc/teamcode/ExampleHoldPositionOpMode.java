@@ -2,23 +2,23 @@ package org.firstinspires.ftc.teamcode;
 
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
-import com.verniteyaku.pathing.command.CommandRunner;
-import com.verniteyaku.pathing.command.Commands;
-import com.verniteyaku.pathing.command.FollowPathCommand;
-import com.verniteyaku.pathing.command.HoldPositionCommand;
-import com.verniteyaku.pathing.control.Clock;
-import com.verniteyaku.pathing.control.FollowerConstants;
-import com.verniteyaku.pathing.follower.PathFollower;
-import com.verniteyaku.pathing.follower.PoseHolder;
-import com.verniteyaku.pathing.ftc.MecanumDrivetrain;
-import com.verniteyaku.pathing.geometry.Pose2d;
-import com.verniteyaku.pathing.localization.OdometryComputer;
-import com.verniteyaku.pathing.localization.OdometryComputerLocalizer;
-import com.verniteyaku.pathing.paths.BezierLine;
-import com.verniteyaku.pathing.paths.PathBuilder;
-import com.verniteyaku.pathing.paths.PathChain;
-import com.verniteyaku.pathing.paths.Point;
-import com.verniteyaku.pathing.units.DistanceUnit;
+import com.platapus.pathing.command.CommandRunner;
+import com.platapus.pathing.command.Commands;
+import com.platapus.pathing.command.FollowPathCommand;
+import com.platapus.pathing.command.HoldPositionCommand;
+import com.platapus.pathing.control.Clock;
+import com.platapus.pathing.control.FollowerConstants;
+import com.platapus.pathing.follower.PathFollower;
+import com.platapus.pathing.follower.PoseHolder;
+import com.platapus.pathing.ftc.MecanumDrivetrain;
+import com.platapus.pathing.geometry.Pose2d;
+import com.platapus.pathing.localization.OdometryComputer;
+import com.platapus.pathing.localization.OdometryComputerLocalizer;
+import com.platapus.pathing.paths.BezierLine;
+import com.platapus.pathing.paths.PathBuilder;
+import com.platapus.pathing.paths.PathChain;
+import com.platapus.pathing.paths.Point;
+import com.platapus.pathing.units.DistanceUnit;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 
@@ -32,7 +32,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
  *
  * <p>{@link ExampleAutoOpMode} is the simpler starting point; read that first.
  */
-@Autonomous(name = "VerniteYaku Hold Position", group = "VerniteYaku")
+@Autonomous(name = "PlatapusPathing Hold Position", group = "PlatapusPathing")
 public class ExampleHoldPositionOpMode extends LinearOpMode {
 
     /** Stands in for whatever mechanism you are actually waiting on. */

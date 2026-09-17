@@ -1,4 +1,4 @@
-# VerniteYaku documentation
+# PlatapusPathing documentation
 
 | Guide | For |
 |---|---|

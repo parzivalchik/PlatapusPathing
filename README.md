@@ -1,4 +1,4 @@
-# VerniteYaku
+# PlatapusPathing
 
 A path-following library for FIRST Tech Challenge robots.
 
@@ -390,7 +390,7 @@ what is already active is not worth the churn of adopting.
 
 ### Persistence
 
-`FtcTuningStore` writes to `/sdcard/FIRST/verniteyaku/feedforward.properties` —
+`FtcTuningStore` writes to `/sdcard/FIRST/platapuspathing/feedforward.properties` —
 three human-readable lines, survives an app update, deletable over ADB when you
 want to start over. Call `restore()` at init and `persist()` at the end, and the
 second match starts from the first match's answer. A corrupt or implausible file

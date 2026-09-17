@@ -4,6 +4,6 @@ plugins {
 }
 
 allprojects {
-    group = 'com.verniteyaku'
+    group = 'com.platapus'
     version = '0.1.0-SNAPSHOT'
 }

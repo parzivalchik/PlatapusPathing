@@ -22,7 +22,7 @@ javadoc {
         addStringOption('Xdoclint:none', '-quiet')
         links 'https://docs.oracle.com/en/java/javase/17/docs/api/'
     }
-    title = "VerniteYaku ${project.version}"
+    title = "PlatapusPathing ${project.version}"
 }
 
 dependencies {
@@ -41,7 +41,7 @@ test {
 publishing {
     publications {
         core(MavenPublication) {
-            artifactId = 'verniteyaku-core'
+            artifactId = 'platapuspathing-core'
             from components.java
         }
     }

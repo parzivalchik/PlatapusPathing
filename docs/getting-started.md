@@ -2,7 +2,7 @@
 
 ## Adding it to your project
 
-VerniteYaku is two modules. `:core` is pure Java — all the math and control, no
+PlatapusPathing is two modules. `:core` is pure Java — all the math and control, no
 Android, no FTC SDK. `:ftc` is a thin Android library holding the hardware
 wrappers.
 

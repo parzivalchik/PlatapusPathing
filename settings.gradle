@@ -14,7 +14,7 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = 'VerniteYaku'
+rootProject.name = 'PlatapusPathing'
 
 // :core is pure Java. It always builds, on any machine, with no Android SDK.
 include ':core'
@@ -44,5 +44,5 @@ if (sdkDir != null && file(sdkDir).exists()) {
                 "to build :ftc and :TeamCode. (:core needs neither.)")
         }
     }
-    logger.lifecycle('VerniteYaku: no Android SDK found -- building :core only.')
+    logger.lifecycle('PlatapusPathing: no Android SDK found -- building :core only.')
 }

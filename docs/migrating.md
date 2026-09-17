@@ -13,7 +13,7 @@ PathChain chain = follower.pathBuilder()
         .setLinearHeadingInterpolation(0, Math.toRadians(90))
         .build();
 
-// VerniteYaku
+// PlatapusPathing
 PathChain chain = new PathBuilder()
         .addPath(new BezierLine(new Point(0, 0), new Point(24, 0)))
         .setLinearHeadingInterpolation(0, Math.toRadians(90))

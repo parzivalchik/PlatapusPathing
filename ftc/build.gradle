@@ -3,7 +3,7 @@ plugins {
 }
 
 android {
-    namespace 'com.verniteyaku.pathing.ftc'
+    namespace 'com.platapus.pathing.ftc'
     compileSdk 30
 
     defaultConfig {
