@@ -1561,6 +1561,7 @@ function render() {
   fitView(rect);
   ctx.clearRect(0, 0, rect.width, rect.height);
   drawField(rect);
+  if (korlan) korlan.check();
 
   const robots = activeRobots();
   const inflate = S.margin / 2;
@@ -3350,28 +3351,32 @@ window.addEventListener("keydown", e => {
 
 /* ---------- a small door, unmarked ---------- */
 
-/* Type it anywhere on the page. Nothing in the plan changes; only what the
-   land is called. Type it again to leave. */
-(() => {
-  const WORD = "korlan";
-  let typed = "";
+/* Park a robot at exactly (-0.2, 1.7) and you are there. Move it and you are
+   not. Nothing in the plan changes; only what the land is called. */
+var korlan = (() => {   // var: render() may run before this line, and typeof must not throw
+  const DOOR = { x: -0.2, y: 1.7 };
+  const EPS = 1e-6;
   let inside = false;
   const h1 = document.querySelector("#toolbar .brand h1");
   const plain = h1 ? h1.textContent : "";
 
-  window.addEventListener("keydown", e => {
-    if (e.key.length !== 1 || e.ctrlKey || e.metaKey || e.altKey) return;
-    if (/input|textarea|select/i.test(e.target.tagName)) return;
-    typed = (typed + e.key.toLowerCase()).slice(-WORD.length);
-    if (typed !== WORD) return;
-    typed = "";
-    inside = !inside;
-    if (h1) h1.textContent = inside ? "KorlanLand" : plain;
-    document.title = inside ? "KorlanLand" : "PlatapusPathing Planner";
-    console.log(inside
-      ? "Welcome to KorlanLand. The tiles are the same; the name is not."
-      : "You have left KorlanLand.");
-  });
+  const atDoor = r => {
+    const p = startPositionOf(r);
+    return Math.abs(p.x - DOOR.x) < EPS && Math.abs(p.y - DOOR.y) < EPS;
+  };
+
+  return {
+    check() {
+      const now = activeRobots().some(atDoor);
+      if (now === inside) return;
+      inside = now;
+      if (h1) h1.textContent = inside ? "KorlanLand" : plain;
+      document.title = inside ? "KorlanLand" : "PlatapusPathing Planner";
+      console.log(inside
+        ? "Welcome to KorlanLand. The tiles are the same; the name is not."
+        : "You have left KorlanLand.");
+    }
+  };
 })();
 
 /* ---------- boot ---------- */
