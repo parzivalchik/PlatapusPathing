@@ -2510,7 +2510,11 @@ function renderSegments() {
       }
 
       invalidate();
-      if (structural || act === "wait" || act === "cap") syncPanel();
+      // cap/wait are not structural: syncPanel() would rebuild this whole
+      // list via renderSegments(), destroying the input being typed into
+      // and dropping focus/cursor position mid-keystroke. Their summary tags
+      // in the item-head catch up next time something else re-syncs the panel.
+      if (structural) syncPanel();
       render();
     });
   });
