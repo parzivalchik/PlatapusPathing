@@ -241,5 +241,19 @@ class BezierPathTest {
             assertThrows(IllegalArgumentException.class,
                     () -> new BezierCurve(new Point(0, 0), new Point(1, 1)));
         }
+
+        @Test
+        void closestTWithACloseGuessMatchesAPoorGuess() {
+            BezierCurve cubic = new BezierCurve(
+                    new Point(0, 0), new Point(0, 10), new Point(10, 10), new Point(10, 0));
+            Vector2d onCurve = cubic.getPoint(0.62);
+
+            double fromPoorGuess = cubic.getClosestT(onCurve, 0.0);
+            double fromCloseGuess = cubic.getClosestT(onCurve, 0.6);
+
+            assertEquals(fromPoorGuess, fromCloseGuess, 1e-3,
+                    "a close tGuess must not change which point is found");
+            assertEquals(0.62, fromCloseGuess, 1e-3);
+        }
     }
 }

@@ -17,6 +17,10 @@ import java.util.List;
  * construction time. That costs a few hundred microseconds once, and makes
  * {@link #arcLengthAt} and {@link #tAtArcLength} constant-time afterwards -- which
  * matters, because the follower calls them every control loop.
+ *
+ * <p>Not thread-safe; call it from the control loop only. Evaluation reuses one
+ * scratch buffer per instance rather than allocating on every call, since
+ * {@link #getClosestT} alone can evaluate a curve hundreds of times a loop.
  */
 public class BezierPath implements Path {
 
@@ -25,9 +29,16 @@ public class BezierPath implements Path {
      *  OpMode's init block. */
     private static final int ARC_SAMPLES = 200;
 
+    /** Samples either side of the guess searched before falling back to a full scan. */
+    private static final int CLOSEST_T_WINDOW_RADIUS = 5;
+
     private final List<Vector2d> controlPoints;
     private final List<Vector2d> firstDerivativePoints;
     private final List<Vector2d> secondDerivativePoints;
+
+    /** Reused by {@link #deCasteljau}; sized once, to the largest of the three
+     *  point lists above, so evaluation never allocates. */
+    private final Vector2d[] scratch;
 
     /** cumulativeLength[i] = arc length from t=0 to t=i/ARC_SAMPLES. */
     private final double[] cumulativeLength;
@@ -46,6 +57,7 @@ public class BezierPath implements Path {
         this.controlPoints = Collections.unmodifiableList(cps);
         this.firstDerivativePoints = derivativeControlPoints(cps);
         this.secondDerivativePoints = derivativeControlPoints(firstDerivativePoints);
+        this.scratch = new Vector2d[controlPoints.size()];
 
         this.cumulativeLength = new double[ARC_SAMPLES + 1];
         double running = 0.0;
@@ -81,13 +93,19 @@ public class BezierPath implements Path {
         return Collections.unmodifiableList(out);
     }
 
-    /** Evaluates a Bezier with the given control points at {@code t}. */
-    private static Vector2d deCasteljau(List<Vector2d> points, double t) {
-        if (points.size() == 1) {
+    /**
+     * Evaluates a Bezier with the given control points at {@code t}, using the
+     * instance's scratch buffer rather than allocating a new array.
+     */
+    private Vector2d deCasteljau(List<Vector2d> points, double t) {
+        int n = points.size();
+        if (n == 1) {
             return points.get(0);
         }
-        Vector2d[] scratch = points.toArray(new Vector2d[0]);
-        for (int level = scratch.length - 1; level > 0; level--) {
+        for (int i = 0; i < n; i++) {
+            scratch[i] = points.get(i);
+        }
+        for (int level = n - 1; level > 0; level--) {
             for (int i = 0; i < level; i++) {
                 scratch[i] = scratch[i].times(1.0 - t).plus(scratch[i + 1].times(t));
             }
@@ -166,26 +184,60 @@ public class BezierPath implements Path {
 
     @Override
     public double getClosestT(Vector2d query, double tGuess) {
-        // Coarse scan for a global bracket, so a bad guess cannot strand the
-        // search in the wrong local minimum...
-        double bestT = 0.0;
-        double bestDistance = Double.MAX_VALUE;
-        for (int i = 0; i <= ARC_SAMPLES; i++) {
+        double guess = clamp01(tGuess);
+
+        // Fast path: search a small window of samples around the guess first.
+        // The common caller (PathChain.project, every control loop) supplies
+        // the previous loop's t, and the robot moves a small fraction of a
+        // sample step per loop, so the true closest point is almost always
+        // inside a small window around it. Skip the full ARC_SAMPLES scan
+        // whenever the window's own minimum sits strictly inside it -- a
+        // minimum sitting on the window's edge means the true minimum may lie
+        // further out, so only then does the full scan below run, exactly as
+        // it always has. That fallback is also what keeps a path that crosses
+        // itself, or a caller with a poor or absent guess, correct.
+        int guessIndex = (int) Math.round(guess * ARC_SAMPLES);
+        int windowLow = Math.max(0, guessIndex - CLOSEST_T_WINDOW_RADIUS);
+        int windowHigh = Math.min(ARC_SAMPLES, guessIndex + CLOSEST_T_WINDOW_RADIUS);
+
+        double bestT = guess;
+        double bestDistance = getPoint(guess).distanceTo(query);
+        int bestIndex = -1;
+        for (int i = windowLow; i <= windowHigh; i++) {
             double t = (double) i / ARC_SAMPLES;
             double d = getPoint(t).distanceTo(query);
             if (d < bestDistance) {
                 bestDistance = d;
                 bestT = t;
+                bestIndex = i;
             }
         }
+        boolean onWindowEdge = (bestIndex == windowLow && windowLow > 0)
+                || (bestIndex == windowHigh && windowHigh < ARC_SAMPLES);
 
-        // ...but prefer the neighbourhood of the caller's guess when it is
-        // genuinely competitive. On a path that crosses itself, both lobes are
-        // near-equidistant and the guess is what breaks the tie correctly.
-        double guess = clamp01(tGuess);
-        double guessDistance = getPoint(guess).distanceTo(query);
-        if (guessDistance <= bestDistance + 1e-6) {
-            bestT = guess;
+        if (onWindowEdge) {
+            // The guess's neighbourhood was not enough to be sure -- fall back
+            // to a full coarse scan for a global bracket.
+            double windowBestT = bestT;
+            double windowBestDistance = bestDistance;
+
+            bestT = 0.0;
+            bestDistance = Double.MAX_VALUE;
+            for (int i = 0; i <= ARC_SAMPLES; i++) {
+                double t = (double) i / ARC_SAMPLES;
+                double d = getPoint(t).distanceTo(query);
+                if (d < bestDistance) {
+                    bestDistance = d;
+                    bestT = t;
+                }
+            }
+
+            // ...but prefer the neighbourhood of the caller's guess when it is
+            // genuinely competitive. On a path that crosses itself, both lobes
+            // are near-equidistant and the guess is what breaks the tie correctly.
+            if (windowBestDistance <= bestDistance + 1e-6) {
+                bestT = windowBestT;
+            }
         }
 
         // Golden-section refinement inside one sample interval.
