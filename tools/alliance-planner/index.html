@@ -2057,12 +2057,24 @@ const updateTimeLabel = () => {
    Panel
    ========================================================================== */
 
+let scanDebounceTimer = null;
+
 function invalidate() {
+  // Path caches (length, arc-length tables) must be current immediately —
+  // renderSegments() and render() read them on the same tick.
   S.robots.forEach(rebuild);
-  scan = scanCollisions();
-  if (S.time > scan.duration) S.time = scan.duration;
-  updateVerdict();
-  syncScrub();
+
+  // The collision scan itself is a full duration/SCAN_DT sweep and is not
+  // needed on every keystroke, so it is debounced: rapid edits (typing a
+  // coordinate, dragging) coalesce into one scan ~120ms after things settle.
+  clearTimeout(scanDebounceTimer);
+  scanDebounceTimer = setTimeout(() => {
+    scan = scanCollisions();
+    if (S.time > scan.duration) S.time = scan.duration;
+    updateVerdict();
+    syncScrub();
+    render();
+  }, 120);
 }
 
 function updateVerdict() {
