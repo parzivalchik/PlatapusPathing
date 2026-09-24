@@ -267,6 +267,26 @@
     color: var(--accent); font-weight: 600; pointer-events: none; z-index: 5;
   }
   .drop-hint.on { display: flex; }
+
+  .text-modal {
+    position: fixed; inset: 0; background: rgba(0, 0, 0, .66);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 100; padding: 24px;
+  }
+  /* An explicit height, not just max-height: the textarea inside uses
+     flex:1, whose flex-basis of 0% collapses inside a content-sized panel. */
+  .text-modal-panel {
+    background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+    padding: 14px; max-width: 960px; width: 100%; height: calc(100vh - 48px);
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .text-modal-head { display: flex; align-items: baseline; gap: 10px; flex: 0 0 auto; }
+  .text-modal-head .hint { flex: 1; }
+  .text-modal-body {
+    flex: 1 1 auto; height: auto; min-height: 0; resize: none;
+    white-space: pre; overflow: auto;
+  }
+  .text-modal-foot { flex: 0 0 auto; }
 </style>
 </head>
 <body>
@@ -1943,11 +1963,6 @@ canvas.addEventListener("pointerup", e => {
   syncPanel();
 });
 
-/**
- * Moves a control point, dragging the neighbouring segment's shared endpoint
- * with it. Letting a chain come apart at a joint would silently produce a path
- * the library cannot follow continuously.
- */
 /** Spins a path about its own start point by {@code delta} radians. */
 function rotatePath(robot, delta) {
   if (Math.abs(delta) < 1e-12) return;
@@ -1978,6 +1993,11 @@ function translatePath(robot, dx, dy) {
   });
 }
 
+/**
+ * Moves a control point, dragging the neighbouring segment's shared endpoint
+ * with it. Letting a chain come apart at a joint would silently produce a path
+ * the library cannot follow continuously.
+ */
 function movePoint(robot, segIndex, ptIndex, x, y) {
   const sg = robot.segments[segIndex];
   sg.points[ptIndex] = { x, y };
@@ -3091,25 +3111,18 @@ function showText(title, text, subtitle) {
 
   const wrap = document.createElement("div");
   wrap.id = "textModal";
-  wrap.style.cssText = `position:fixed;inset:0;background:rgba(0,0,0,.66);
-    display:flex;align-items:center;justify-content:center;z-index:100;padding:24px`;
-  // An explicit height, not just max-height: the textarea below uses flex:1,
-  // whose flex-basis of 0% collapses inside a content-sized container.
+  wrap.className = "text-modal";
   wrap.innerHTML = `
-    <div style="background:var(--card);border:1px solid var(--line);border-radius:10px;
-                padding:14px;max-width:960px;width:100%;height:calc(100vh - 48px);
-                display:flex;flex-direction:column;gap:10px">
-      <div style="display:flex;align-items:baseline;gap:10px;flex:0 0 auto">
+    <div class="text-modal-panel">
+      <div class="text-modal-head">
         <b>${title}</b>
-        <span class="hint" style="flex:1">${subtitle || ""} &middot; ${lineCount} lines</span>
+        <span class="hint">${subtitle || ""} &middot; ${lineCount} lines</span>
         <button class="btn primary" data-act="copy">Copy</button>
         <button class="btn" data-act="close">Close</button>
       </div>
-      <textarea readonly spellcheck="false" wrap="off"
-                style="flex:1 1 auto;height:auto;min-height:0;resize:none;
-                       white-space:pre;overflow:auto"
+      <textarea readonly spellcheck="false" wrap="off" class="text-modal-body"
                 >${text.replace(/&/g, "&amp;").replace(/</g, "&lt;")}</textarea>
-      <div class="hint" style="flex:0 0 auto">
+      <div class="hint text-modal-foot">
         Escape or click outside to close.
       </div>
     </div>`;
