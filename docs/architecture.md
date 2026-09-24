@@ -240,7 +240,7 @@ guards this specifically, because it is the kind of thing that silently reverts.
 
 ## Testing
 
-234 tests, all headless.
+302 tests, all headless.
 
 `SimulatedRobot` is a kinematic stand-in: powers produce wheel velocities
 instantly and proportionally. There is no motor dynamics model and no battery

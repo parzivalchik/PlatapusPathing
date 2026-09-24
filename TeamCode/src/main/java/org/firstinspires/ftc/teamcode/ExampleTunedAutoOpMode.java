@@ -23,6 +23,7 @@ import com.platapus.pathing.tuning.FeedforwardGains;
 import com.platapus.pathing.tuning.StallEvent;
 import com.platapus.pathing.tuning.TunableFeedforward;
 import com.platapus.pathing.tuning.StallDetector;
+import com.platapus.pathing.tuning.StallListener;
 import com.platapus.pathing.tuning.TuningSession;
 import com.platapus.pathing.units.DistanceUnit;
 
@@ -107,7 +108,7 @@ public class ExampleTunedAutoOpMode extends LinearOpMode {
         // The library reports; you decide what it means. Aborting the path,
         // backing off and retrying, or simply logging it are all reasonable and
         // all game-specific, so none of them are built in.
-        stallDetector.addListener(new com.platapus.pathing.tuning.StallListener() {
+        stallDetector.addListener(new StallListener() {
             @Override
             public void onStallDetected(StallEvent event) {
                 lastStall.set(String.format("motor %d @ %.1fs (%.1fA vs %.1fA)",
