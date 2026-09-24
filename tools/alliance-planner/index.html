@@ -2152,7 +2152,7 @@ function renderPlans() {
   const sel = document.getElementById("planSelect");
   sel.innerHTML = S.plans
     .map((p, i) => `<option value="${i}"${i === S.activePlan ? " selected" : ""}>`
-      + `${p.name}</option>`)
+      + `${escapeHtml(p.name)}</option>`)
     .join("");
   const nameEl = document.getElementById("planName");
   if (document.activeElement !== nameEl) {
@@ -3116,7 +3116,7 @@ function showText(title, text, subtitle) {
     <div class="text-modal-panel">
       <div class="text-modal-head">
         <b>${title}</b>
-        <span class="hint">${subtitle || ""} &middot; ${lineCount} lines</span>
+        <span class="hint">${escapeHtml(subtitle || "")} &middot; ${lineCount} lines</span>
         <button class="btn primary" data-act="copy">Copy</button>
         <button class="btn" data-act="close">Close</button>
       </div>

@@ -29,9 +29,6 @@ public class BezierPath implements Path {
      *  OpMode's init block. */
     private static final int ARC_SAMPLES = 200;
 
-    /** Samples either side of the guess searched before falling back to a full scan. */
-    private static final int CLOSEST_T_WINDOW_RADIUS = 5;
-
     private final List<Vector2d> controlPoints;
     private final List<Vector2d> firstDerivativePoints;
     private final List<Vector2d> secondDerivativePoints;
@@ -184,60 +181,35 @@ public class BezierPath implements Path {
 
     @Override
     public double getClosestT(Vector2d query, double tGuess) {
-        double guess = clamp01(tGuess);
-
-        // Fast path: search a small window of samples around the guess first.
-        // The common caller (PathChain.project, every control loop) supplies
-        // the previous loop's t, and the robot moves a small fraction of a
-        // sample step per loop, so the true closest point is almost always
-        // inside a small window around it. Skip the full ARC_SAMPLES scan
-        // whenever the window's own minimum sits strictly inside it -- a
-        // minimum sitting on the window's edge means the true minimum may lie
-        // further out, so only then does the full scan below run, exactly as
-        // it always has. That fallback is also what keeps a path that crosses
-        // itself, or a caller with a poor or absent guess, correct.
-        int guessIndex = (int) Math.round(guess * ARC_SAMPLES);
-        int windowLow = Math.max(0, guessIndex - CLOSEST_T_WINDOW_RADIUS);
-        int windowHigh = Math.min(ARC_SAMPLES, guessIndex + CLOSEST_T_WINDOW_RADIUS);
-
-        double bestT = guess;
-        double bestDistance = getPoint(guess).distanceTo(query);
-        int bestIndex = -1;
-        for (int i = windowLow; i <= windowHigh; i++) {
+        // Coarse scan for a global bracket, so a bad guess cannot strand the
+        // search in the wrong local minimum...
+        //
+        // A windowed fast path around the guess was tried here (skip this scan
+        // when a small neighbourhood of the guess looks like a confident local
+        // minimum) and reverted: fuzz-testing it against a full scan found
+        // real, if infrequent, wrong answers -- a window can look confidently
+        // near the curve while a closer point sits just outside it, especially
+        // on a path with tight curvature or one that crosses itself. This
+        // method feeds the follower's control loop directly, so a silently
+        // wrong projection is worse than the allocation this scan costs.
+        double bestT = 0.0;
+        double bestDistance = Double.MAX_VALUE;
+        for (int i = 0; i <= ARC_SAMPLES; i++) {
             double t = (double) i / ARC_SAMPLES;
             double d = getPoint(t).distanceTo(query);
             if (d < bestDistance) {
                 bestDistance = d;
                 bestT = t;
-                bestIndex = i;
             }
         }
-        boolean onWindowEdge = (bestIndex == windowLow && windowLow > 0)
-                || (bestIndex == windowHigh && windowHigh < ARC_SAMPLES);
 
-        if (onWindowEdge) {
-            // The guess's neighbourhood was not enough to be sure -- fall back
-            // to a full coarse scan for a global bracket.
-            double windowBestT = bestT;
-            double windowBestDistance = bestDistance;
-
-            bestT = 0.0;
-            bestDistance = Double.MAX_VALUE;
-            for (int i = 0; i <= ARC_SAMPLES; i++) {
-                double t = (double) i / ARC_SAMPLES;
-                double d = getPoint(t).distanceTo(query);
-                if (d < bestDistance) {
-                    bestDistance = d;
-                    bestT = t;
-                }
-            }
-
-            // ...but prefer the neighbourhood of the caller's guess when it is
-            // genuinely competitive. On a path that crosses itself, both lobes
-            // are near-equidistant and the guess is what breaks the tie correctly.
-            if (windowBestDistance <= bestDistance + 1e-6) {
-                bestT = windowBestT;
-            }
+        // ...but prefer the neighbourhood of the caller's guess when it is
+        // genuinely competitive. On a path that crosses itself, both lobes are
+        // near-equidistant and the guess is what breaks the tie correctly.
+        double guess = clamp01(tGuess);
+        double guessDistance = getPoint(guess).distanceTo(query);
+        if (guessDistance <= bestDistance + 1e-6) {
+            bestT = guess;
         }
 
         // Golden-section refinement inside one sample interval.
