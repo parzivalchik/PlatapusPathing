@@ -330,11 +330,8 @@ when the robot does something baffling.
 Put `getCorrectionAuthority()` on telemetry while tuning the blend — it is the
 one number that says which regime the follower is currently in.
 
-Tune feedforward *before* PID. If `kV` is wrong, the PID spends the whole path
-papering over a systematic error and no gain will look right.
-
-Phase 3 will fit `kS`, `kV` and `kA` online by recursive least squares, so this
-table becomes a starting point rather than a chore.
+Phase 3's online tuner fits `kS`, `kV` and `kA` online by recursive least
+squares, so this table is a starting point rather than a chore.
 
 ---
 

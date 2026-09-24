@@ -241,5 +241,44 @@ class BezierPathTest {
             assertThrows(IllegalArgumentException.class,
                     () -> new BezierCurve(new Point(0, 0), new Point(1, 1)));
         }
+
+        @Test
+        void closestTWithACloseGuessMatchesAPoorGuess() {
+            BezierCurve cubic = new BezierCurve(
+                    new Point(0, 0), new Point(0, 10), new Point(10, 10), new Point(10, 0));
+            Vector2d onCurve = cubic.getPoint(0.62);
+
+            double fromPoorGuess = cubic.getClosestT(onCurve, 0.0);
+            double fromCloseGuess = cubic.getClosestT(onCurve, 0.6);
+
+            assertEquals(fromPoorGuess, fromCloseGuess, 1e-3,
+                    "a close tGuess must not change which point is found");
+            assertEquals(0.62, fromCloseGuess, 1e-3);
+        }
+
+        @Test
+        void closestTWithAStaleGuessIsNoWorseThanAFullScan() {
+            // A query well off the curve, near its far (t=1) end, with a guess
+            // planted at the opposite (t=0) end -- the situation a real control
+            // loop can hand this method when the robot has jumped segments or
+            // the guess is otherwise stale. Regression guard: an earlier,
+            // windowed version of getClosestT settled for the guess's own
+            // neighbourhood here instead of finding the true closest point,
+            // because that neighbourhood's own gradient pointed away from the
+            // guess and looked like a confident local answer. See git history
+            // on this method for why that approach was reverted.
+            BezierCurve cubic = new BezierCurve(
+                    new Point(0, 0), new Point(0, 10), new Point(10, 10), new Point(10, 0));
+            Vector2d farOffCurve = new Vector2d(22, -0.2);
+
+            double fromFullScan = cubic.getClosestT(farOffCurve, 1.0);
+            double fromStaleGuess = cubic.getClosestT(farOffCurve, 0.0);
+
+            double distanceFromFullScan = cubic.getPoint(fromFullScan).distanceTo(farOffCurve);
+            double distanceFromStaleGuess = cubic.getPoint(fromStaleGuess).distanceTo(farOffCurve);
+
+            assertEquals(distanceFromFullScan, distanceFromStaleGuess, 1e-2,
+                    "a stale guess must not settle for a worse point than a full scan would find");
+        }
     }
 }

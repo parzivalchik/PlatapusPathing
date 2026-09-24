@@ -267,6 +267,26 @@
     color: var(--accent); font-weight: 600; pointer-events: none; z-index: 5;
   }
   .drop-hint.on { display: flex; }
+
+  .text-modal {
+    position: fixed; inset: 0; background: rgba(0, 0, 0, .66);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 100; padding: 24px;
+  }
+  /* An explicit height, not just max-height: the textarea inside uses
+     flex:1, whose flex-basis of 0% collapses inside a content-sized panel. */
+  .text-modal-panel {
+    background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+    padding: 14px; max-width: 960px; width: 100%; height: calc(100vh - 48px);
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .text-modal-head { display: flex; align-items: baseline; gap: 10px; flex: 0 0 auto; }
+  .text-modal-head .hint { flex: 1; }
+  .text-modal-body {
+    flex: 1 1 auto; height: auto; min-height: 0; resize: none;
+    white-space: pre; overflow: auto;
+  }
+  .text-modal-foot { flex: 0 0 auto; }
 </style>
 </head>
 <body>
@@ -584,6 +604,9 @@ const ARC_SAMPLES = 200;
 const TWO_PI = Math.PI * 2;
 const FIELD = 144;            // FTC field is 12 ft square
 const SCAN_DT = 0.02;         // collision scan step, seconds
+
+const ESCAPE_HTML_MAP = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
+const escapeHtml = s => String(s).replace(/[&<>"']/g, c => ESCAPE_HTML_MAP[c]);
 
 const normalizeAngle = a => {
   a = a % TWO_PI;
@@ -1556,6 +1579,18 @@ function updateMeasureReadout() {
     <span>Angle</span><span>${angle.toFixed(2)}&deg;</span>`;
 }
 
+// Coalesces bursts of render() requests (e.g. many pointermove events between
+// two frames) into at most one render per animation frame.
+let renderScheduled = false;
+function scheduleRender() {
+  if (renderScheduled) return;
+  renderScheduled = true;
+  requestAnimationFrame(() => {
+    renderScheduled = false;
+    render();
+  });
+}
+
 function render() {
   const rect = fitCanvas(canvas, ctx);
   fitView(rect);
@@ -1866,7 +1901,7 @@ canvas.addEventListener("pointermove", e => {
   if (drag.kind === "measure") {
     const w = screenToWorld(px, py, rect);
     S.measure.to = { x: w.x, y: w.y };
-    render();
+    scheduleRender();
     return;
   }
 
@@ -1919,7 +1954,7 @@ canvas.addEventListener("pointermove", e => {
     invalidate();
   }
 
-  render();
+  scheduleRender();
 });
 
 canvas.addEventListener("pointerup", e => {
@@ -1928,11 +1963,6 @@ canvas.addEventListener("pointerup", e => {
   syncPanel();
 });
 
-/**
- * Moves a control point, dragging the neighbouring segment's shared endpoint
- * with it. Letting a chain come apart at a joint would silently produce a path
- * the library cannot follow continuously.
- */
 /** Spins a path about its own start point by {@code delta} radians. */
 function rotatePath(robot, delta) {
   if (Math.abs(delta) < 1e-12) return;
@@ -1963,6 +1993,11 @@ function translatePath(robot, dx, dy) {
   });
 }
 
+/**
+ * Moves a control point, dragging the neighbouring segment's shared endpoint
+ * with it. Letting a chain come apart at a joint would silently produce a path
+ * the library cannot follow continuously.
+ */
 function movePoint(robot, segIndex, ptIndex, x, y) {
   const sg = robot.segments[segIndex];
   sg.points[ptIndex] = { x, y };
@@ -2054,12 +2089,24 @@ const updateTimeLabel = () => {
    Panel
    ========================================================================== */
 
+let scanDebounceTimer = null;
+
 function invalidate() {
+  // Path caches (length, arc-length tables) must be current immediately —
+  // renderSegments() and render() read them on the same tick.
   S.robots.forEach(rebuild);
-  scan = scanCollisions();
-  if (S.time > scan.duration) S.time = scan.duration;
-  updateVerdict();
-  syncScrub();
+
+  // The collision scan itself is a full duration/SCAN_DT sweep and is not
+  // needed on every keystroke, so it is debounced: rapid edits (typing a
+  // coordinate, dragging) coalesce into one scan ~120ms after things settle.
+  clearTimeout(scanDebounceTimer);
+  scanDebounceTimer = setTimeout(() => {
+    scan = scanCollisions();
+    if (S.time > scan.duration) S.time = scan.duration;
+    updateVerdict();
+    syncScrub();
+    render();
+  }, 120);
 }
 
 function updateVerdict() {
@@ -2087,7 +2134,7 @@ function updateVerdict() {
   }
   if (obstacleCount) {
     const names = [...new Set(scan.obstacleHits.map(h => S.obstacles[h.obstacle].name))];
-    parts.push(`Hits ${names.map(n => `<b>${n}</b>`).join(", ")} `
+    parts.push(`Hits ${names.map(n => `<b>${escapeHtml(n)}</b>`).join(", ")} `
       + `from <b>${scan.obstacleHits[0].t.toFixed(2)} s</b>.`);
   }
   el.innerHTML = parts.join("<br>");
@@ -2105,7 +2152,7 @@ function renderPlans() {
   const sel = document.getElementById("planSelect");
   sel.innerHTML = S.plans
     .map((p, i) => `<option value="${i}"${i === S.activePlan ? " selected" : ""}>`
-      + `${p.name}</option>`)
+      + `${escapeHtml(p.name)}</option>`)
     .join("");
   const nameEl = document.getElementById("planName");
   if (document.activeElement !== nameEl) {
@@ -2507,7 +2554,11 @@ function renderSegments() {
       }
 
       invalidate();
-      if (structural || act === "wait" || act === "cap") syncPanel();
+      // cap/wait are not structural: syncPanel() would rebuild this whole
+      // list via renderSegments(), destroying the input being typed into
+      // and dropping focus/cursor position mid-keystroke. Their summary tags
+      // in the item-head catch up next time something else re-syncs the panel.
+      if (structural) syncPanel();
       render();
     });
   });
@@ -2553,7 +2604,7 @@ function renderObstacles() {
     div.innerHTML = `
       <div class="item-head">
         <span class="idx">${i}</span>
-        <input type="text" data-act="oname" data-i="${i}" value="${o.name}"
+        <input type="text" data-act="oname" data-i="${i}" value="${escapeHtml(o.name)}"
                style="flex:1;padding:3px 6px">
         <select data-act="okind" data-i="${i}" style="width:88px;padding:3px 4px">
           ${Object.entries(OBSTACLE_KINDS).map(([k, v]) =>
@@ -3060,25 +3111,18 @@ function showText(title, text, subtitle) {
 
   const wrap = document.createElement("div");
   wrap.id = "textModal";
-  wrap.style.cssText = `position:fixed;inset:0;background:rgba(0,0,0,.66);
-    display:flex;align-items:center;justify-content:center;z-index:100;padding:24px`;
-  // An explicit height, not just max-height: the textarea below uses flex:1,
-  // whose flex-basis of 0% collapses inside a content-sized container.
+  wrap.className = "text-modal";
   wrap.innerHTML = `
-    <div style="background:var(--card);border:1px solid var(--line);border-radius:10px;
-                padding:14px;max-width:960px;width:100%;height:calc(100vh - 48px);
-                display:flex;flex-direction:column;gap:10px">
-      <div style="display:flex;align-items:baseline;gap:10px;flex:0 0 auto">
+    <div class="text-modal-panel">
+      <div class="text-modal-head">
         <b>${title}</b>
-        <span class="hint" style="flex:1">${subtitle || ""} &middot; ${lineCount} lines</span>
+        <span class="hint">${escapeHtml(subtitle || "")} &middot; ${lineCount} lines</span>
         <button class="btn primary" data-act="copy">Copy</button>
         <button class="btn" data-act="close">Close</button>
       </div>
-      <textarea readonly spellcheck="false" wrap="off"
-                style="flex:1 1 auto;height:auto;min-height:0;resize:none;
-                       white-space:pre;overflow:auto"
+      <textarea readonly spellcheck="false" wrap="off" class="text-modal-body"
                 >${text.replace(/&/g, "&amp;").replace(/</g, "&lt;")}</textarea>
-      <div class="hint" style="flex:0 0 auto">
+      <div class="hint text-modal-foot">
         Escape or click outside to close.
       </div>
     </div>`;

@@ -17,6 +17,10 @@ import java.util.List;
  * construction time. That costs a few hundred microseconds once, and makes
  * {@link #arcLengthAt} and {@link #tAtArcLength} constant-time afterwards -- which
  * matters, because the follower calls them every control loop.
+ *
+ * <p>Not thread-safe; call it from the control loop only. Evaluation reuses one
+ * scratch buffer per instance rather than allocating on every call, since
+ * {@link #getClosestT} alone can evaluate a curve hundreds of times a loop.
  */
 public class BezierPath implements Path {
 
@@ -28,6 +32,10 @@ public class BezierPath implements Path {
     private final List<Vector2d> controlPoints;
     private final List<Vector2d> firstDerivativePoints;
     private final List<Vector2d> secondDerivativePoints;
+
+    /** Reused by {@link #deCasteljau}; sized once, to the largest of the three
+     *  point lists above, so evaluation never allocates. */
+    private final Vector2d[] scratch;
 
     /** cumulativeLength[i] = arc length from t=0 to t=i/ARC_SAMPLES. */
     private final double[] cumulativeLength;
@@ -46,6 +54,7 @@ public class BezierPath implements Path {
         this.controlPoints = Collections.unmodifiableList(cps);
         this.firstDerivativePoints = derivativeControlPoints(cps);
         this.secondDerivativePoints = derivativeControlPoints(firstDerivativePoints);
+        this.scratch = new Vector2d[controlPoints.size()];
 
         this.cumulativeLength = new double[ARC_SAMPLES + 1];
         double running = 0.0;
@@ -81,13 +90,19 @@ public class BezierPath implements Path {
         return Collections.unmodifiableList(out);
     }
 
-    /** Evaluates a Bezier with the given control points at {@code t}. */
-    private static Vector2d deCasteljau(List<Vector2d> points, double t) {
-        if (points.size() == 1) {
+    /**
+     * Evaluates a Bezier with the given control points at {@code t}, using the
+     * instance's scratch buffer rather than allocating a new array.
+     */
+    private Vector2d deCasteljau(List<Vector2d> points, double t) {
+        int n = points.size();
+        if (n == 1) {
             return points.get(0);
         }
-        Vector2d[] scratch = points.toArray(new Vector2d[0]);
-        for (int level = scratch.length - 1; level > 0; level--) {
+        for (int i = 0; i < n; i++) {
+            scratch[i] = points.get(i);
+        }
+        for (int level = n - 1; level > 0; level--) {
             for (int i = 0; i < level; i++) {
                 scratch[i] = scratch[i].times(1.0 - t).plus(scratch[i + 1].times(t));
             }
@@ -168,6 +183,15 @@ public class BezierPath implements Path {
     public double getClosestT(Vector2d query, double tGuess) {
         // Coarse scan for a global bracket, so a bad guess cannot strand the
         // search in the wrong local minimum...
+        //
+        // A windowed fast path around the guess was tried here (skip this scan
+        // when a small neighbourhood of the guess looks like a confident local
+        // minimum) and reverted: fuzz-testing it against a full scan found
+        // real, if infrequent, wrong answers -- a window can look confidently
+        // near the curve while a closer point sits just outside it, especially
+        // on a path with tight curvature or one that crosses itself. This
+        // method feeds the follower's control loop directly, so a silently
+        // wrong projection is worse than the allocation this scan costs.
         double bestT = 0.0;
         double bestDistance = Double.MAX_VALUE;
         for (int i = 0; i <= ARC_SAMPLES; i++) {
