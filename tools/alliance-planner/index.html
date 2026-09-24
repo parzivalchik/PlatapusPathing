@@ -585,6 +585,9 @@ const TWO_PI = Math.PI * 2;
 const FIELD = 144;            // FTC field is 12 ft square
 const SCAN_DT = 0.02;         // collision scan step, seconds
 
+const ESCAPE_HTML_MAP = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
+const escapeHtml = s => String(s).replace(/[&<>"']/g, c => ESCAPE_HTML_MAP[c]);
+
 const normalizeAngle = a => {
   a = a % TWO_PI;
   if (a > Math.PI) a -= TWO_PI;
@@ -2087,7 +2090,7 @@ function updateVerdict() {
   }
   if (obstacleCount) {
     const names = [...new Set(scan.obstacleHits.map(h => S.obstacles[h.obstacle].name))];
-    parts.push(`Hits ${names.map(n => `<b>${n}</b>`).join(", ")} `
+    parts.push(`Hits ${names.map(n => `<b>${escapeHtml(n)}</b>`).join(", ")} `
       + `from <b>${scan.obstacleHits[0].t.toFixed(2)} s</b>.`);
   }
   el.innerHTML = parts.join("<br>");
@@ -2553,7 +2556,7 @@ function renderObstacles() {
     div.innerHTML = `
       <div class="item-head">
         <span class="idx">${i}</span>
-        <input type="text" data-act="oname" data-i="${i}" value="${o.name}"
+        <input type="text" data-act="oname" data-i="${i}" value="${escapeHtml(o.name)}"
                style="flex:1;padding:3px 6px">
         <select data-act="okind" data-i="${i}" style="width:88px;padding:3px 4px">
           ${Object.entries(OBSTACLE_KINDS).map(([k, v]) =>
