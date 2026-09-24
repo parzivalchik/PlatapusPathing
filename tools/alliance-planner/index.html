@@ -1559,6 +1559,18 @@ function updateMeasureReadout() {
     <span>Angle</span><span>${angle.toFixed(2)}&deg;</span>`;
 }
 
+// Coalesces bursts of render() requests (e.g. many pointermove events between
+// two frames) into at most one render per animation frame.
+let renderScheduled = false;
+function scheduleRender() {
+  if (renderScheduled) return;
+  renderScheduled = true;
+  requestAnimationFrame(() => {
+    renderScheduled = false;
+    render();
+  });
+}
+
 function render() {
   const rect = fitCanvas(canvas, ctx);
   fitView(rect);
@@ -1869,7 +1881,7 @@ canvas.addEventListener("pointermove", e => {
   if (drag.kind === "measure") {
     const w = screenToWorld(px, py, rect);
     S.measure.to = { x: w.x, y: w.y };
-    render();
+    scheduleRender();
     return;
   }
 
@@ -1922,7 +1934,7 @@ canvas.addEventListener("pointermove", e => {
     invalidate();
   }
 
-  render();
+  scheduleRender();
 });
 
 canvas.addEventListener("pointerup", e => {
